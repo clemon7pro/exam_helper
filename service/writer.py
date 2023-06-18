@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 from typing import List
 from docx import Document
+from docx.oxml.ns import qn
 import openpyxl
 import math
 
@@ -13,6 +14,9 @@ class DocWriter(object):
         self.__doc = Document()
         self.__file = file
         self.__questions = questions
+        
+        self.__doc.styles['Normal'].font.name = u'Times New Roman' #设置西文字体
+        self.__doc.styles['Normal']._element.rPr.rFonts.set(qn('w:eastAsia'), u'宋体') #设置中文字体使用字体2->宋体
         
     def __write_single(self, id: int, question: Question) -> None:
         self.__doc.add_paragraph("第" + str(id) + "题. " + question.question_stem)
