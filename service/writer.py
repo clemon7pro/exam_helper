@@ -1,18 +1,19 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 from docx import Document
+import openpyxl
 import math
 
 from .question import *
 
 class DocWriter(object):
     
-    def __init__(self, file, questions: list) -> None:
+    def __init__(self, file: str, questions: list) -> None:
         self.__doc = Document()
         self.__file = file
         self.__questions = questions
         
-    def __write_single(self, id: int, question: Question):
+    def __write_single(self, id: int, question: Question) -> None:
         self.__doc.add_paragraph("第" + str(id) + "题. " + question.question_stem)
         answer = "#err"
         
@@ -33,7 +34,7 @@ class DocWriter(object):
                 
         self.__doc.add_paragraph("答案: " + answer)
     
-    def write(self):
+    def write(self) -> None:
         single_choice_questions = list(filter(lambda item: item.type == QuestionType.single_choice, self.__questions))
         multiple_choice_questions = list(filter(lambda item: item.type == QuestionType.multiple_choice, self.__questions))
         binary_choice_questions = list(filter(lambda item: item.type == QuestionType.binary_choice, self.__questions))
@@ -68,11 +69,60 @@ class DocWriter(object):
                 self.__doc.add_paragraph()
                 id += 1
         
-    def save(self):
+    def save(self) -> None:
         self.__doc.save(self.__file)
 
 class XiaoBaoWriter(object):
     pass
+    # with open("exported.txt","w+") as f:
+    #     for d in data:
+    #         if d["type"] == "简答题":
+    #             continue
+    #         qqq = json.dumps({
+    #             "q": d["question"],
+    #             "a": [k+". "+str(v) for k, v in d["options"].items()],
+    #             "ans": d["answer"]
+    #             }, ensure_ascii=False)
+    #         f.write(qqq+"\n")
 
-class KaoShiBaoWriter(object):
-    pass
+class KaoshibaoWriter(object):
+    def __init__(self, file, questions: list, tpl_file: str="kaoshibao_tpl.xlsx") -> None:
+        self.__file = file
+        self.__questions = questions
+        self.__wb = openpyxl.load_workbook(filename=tpl_file)
+        
+    def __write_single(self, ws, row, question: Question) -> None:
+        
+        ws.cell(row = row, column=1, value=question.question_stem)
+        
+        kaoshibao_type = ''
+        kaoshibao_options = question.options
+        kaoshibao_answer = ''
+        match question.type:
+            case QuestionType.single_choice:
+                kaoshibao_type = '单选题'
+                kaoshibao_answer = question.answer[0]
+            case QuestionType.multiple_choice:
+                kaoshibao_type = '多选题'
+                kaoshibao_answer = "".join(question.answer)
+            case QuestionType.binary_choice:
+                kaoshibao_type = '判断题'
+                kaoshibao_options = ["正确", "错误"]
+                kaoshibao_answer = "A" if question.answer else "B"
+            case QuestionType.short_answer:
+                kaoshibao_type = '简答题'
+                kaoshibao_answer = question.answer
+        ws.cell(row = row, column=2, value=kaoshibao_type)
+        
+        for i, opt in enumerate(kaoshibao_options):
+            ws.cell(row = row, column=i+3, value=opt)
+        ws.cell(row = row, column=11, value=kaoshibao_answer)
+        
+    def write(self) -> None:
+        ws = self.__wb.worksheets[0]
+        for i, question in enumerate(self.__questions):
+            self.__write_single(ws, i+3, question)
+        
+        
+    def save(self) -> None:
+        self.__wb.save(self.__file)
