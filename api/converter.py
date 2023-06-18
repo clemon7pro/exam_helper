@@ -2,10 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 from flask import Flask, request, jsonify
-from werkzeug.utils import secure_filename
 import pandas as pd
-from docx import Document
-import os
 
 app = Flask(__name__)
 # Max upload file size 16M
@@ -30,9 +27,8 @@ def convert():
             "code": -2,
             "message": "No vaild file."
         })
-    upload_file.filename = secure_filename(upload_file.filename)
+        
     f = pd.read_excel(upload_file)
-    print(f)
     
     return jsonify({
         "file_name": upload_file.filename
