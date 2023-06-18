@@ -11,6 +11,6 @@ if __name__ == '__main__':
     # app.run()
     reader = reader.ExcelReader()
     qs = reader.read("4.1-安全知识考试-一线人员-规章制度部分.xls")
-    writer = writer.KaoshibaoWriter("a.xlsx", qs)
+    writer = writer.XiaobaosoutiWriter("a.txt", qs)
     writer.write()
     writer.save()

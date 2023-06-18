@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
+from typing import List
 from docx import Document
 import openpyxl
 import math
@@ -8,7 +9,7 @@ from .question import *
 
 class DocWriter(object):
     
-    def __init__(self, file: str, questions: list) -> None:
+    def __init__(self, file: str, questions: List[Question]) -> None:
         self.__doc = Document()
         self.__file = file
         self.__questions = questions
@@ -72,21 +73,46 @@ class DocWriter(object):
     def save(self) -> None:
         self.__doc.save(self.__file)
 
-class XiaoBaoWriter(object):
-    pass
-    # with open("exported.txt","w+") as f:
-    #     for d in data:
-    #         if d["type"] == "简答题":
-    #             continue
-    #         qqq = json.dumps({
-    #             "q": d["question"],
-    #             "a": [k+". "+str(v) for k, v in d["options"].items()],
-    #             "ans": d["answer"]
-    #             }, ensure_ascii=False)
-    #         f.write(qqq+"\n")
+class XiaobaosoutiWriter(object):
+    
+    def __init__(self, file, questions: List[Question]) -> None:
+        self.__file = file
+        self.__questions = questions
+        self.__xiaobao_questions = []
+        
+    def __write_single(self, question: Question) -> str:
+        xiaobao_options = question.options
+        xiaobao_answer = ''
+        match question.type:
+            case QuestionType.single_choice:
+                xiaobao_answer = question.answer[0]
+            case QuestionType.multiple_choice:
+                xiaobao_answer = "".join(question.answer)
+            case QuestionType.binary_choice:
+                xiaobao_options = ["正确", "错误"]
+                xiaobao_answer = "A" if question.answer else "B"
+            case QuestionType.short_answer:
+                xiaobao_options = [question.answer]
+                xiaobao_answer = "A"
+        
+        return json.dumps({
+                    "q": question.question_stem,
+                    "a": xiaobao_options,
+                    "ans": xiaobao_answer
+                }, ensure_ascii=False)
+        
+    def write(self) -> None:
+        for question in self.__questions:
+            self.__xiaobao_questions.append(self.__write_single(question))
+            
+    
+    def save(self):
+        with open(self.__file,"w+") as f:
+            for xiaobao_question in self.__xiaobao_questions:
+                f.write(xiaobao_question+"\n")
 
 class KaoshibaoWriter(object):
-    def __init__(self, file, questions: list, tpl_file: str="kaoshibao_tpl.xlsx") -> None:
+    def __init__(self, file, questions: List[Question], tpl_file: str="kaoshibao_tpl.xlsx") -> None:
         self.__file = file
         self.__questions = questions
         self.__wb = openpyxl.load_workbook(filename=tpl_file)
@@ -122,7 +148,6 @@ class KaoshibaoWriter(object):
         ws = self.__wb.worksheets[0]
         for i, question in enumerate(self.__questions):
             self.__write_single(ws, i+3, question)
-        
         
     def save(self) -> None:
         self.__wb.save(self.__file)
