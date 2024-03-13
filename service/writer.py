@@ -146,7 +146,9 @@ class KaoshibaoWriter(object):
         
         for i, opt in enumerate(kaoshibao_options):
             ws.cell(row = row, column=i+3, value=opt)
+            
         ws.cell(row = row, column=11, value=kaoshibao_answer)
+        ws.cell(row = row, column=12, value=question.explain)
         
     def write(self) -> None:
         ws = self.__wb.worksheets[0]
