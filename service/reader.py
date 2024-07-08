@@ -37,6 +37,13 @@ class ExcelReader(object):
             if not pd.isna(raw_question[self._model["explain"]]):
                 explain = str(raw_question[self._model["explain"]])
 
+            stem = (
+                raw_question[self._model["question_stem"]]
+                .strip()
+                .replace("\n", "")
+                .replace("\r", "")
+            )
+
             match raw_question[self._model["question_type"]].strip():
                 case "单选题" | "多选题" | "单选" | "多选":
                     raw_options = []
@@ -54,19 +61,20 @@ class ExcelReader(object):
                             question_type=QuestionType.single_choice
                             if raw_question[self._model["question_type"]] == "单选题"
                             else QuestionType.multiple_choice,
-                            stem=raw_question[self._model["question_stem"]].strip(),
+                            stem=stem,
                             answer=answer,
                             options=options,
                             explain=explain,
                         )
                     )
                 case "判断题":
+                    raw_ans = str(raw_question[self._model["answer"]]).upper()
                     questions.append(
                         Question(
                             question_type=QuestionType.binary_choice,
-                            stem=raw_question[self._model["question_stem"]].strip(),
+                            stem=stem,
                             answer=True
-                            if str(raw_question[self._model["answer"]]).upper() == "A"
+                            if raw_ans == "A" or raw_ans == "对" or raw_ans == "正确"
                             else False,
                             explain=explain,
                         )
@@ -75,7 +83,7 @@ class ExcelReader(object):
                     questions.append(
                         Question(
                             question_type=QuestionType.short_answer,
-                            stem=raw_question[self._model["question_stem"]].strip(),
+                            stem=stem,
                             answer=str(raw_question[self._model["answer"]]).strip(),
                             explain=explain,
                         )
