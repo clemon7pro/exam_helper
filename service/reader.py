@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
+import pstats
 from bs4 import BeautifulSoup
 import pandas as pd
 from .question import Question, QuestionType
@@ -118,39 +119,56 @@ class GWXTHtmlReader(object):
                     tds = op.select("td")
                     # o = tds[0].select_one("input").get("value")
                     options.append(tds[1].select_one(".TMOption").text.strip())
+                    
+                flg = []
+                for i, opt in enumerate(options):
+                    if opt[0] == "ABCDEFGHIJK"[i]:
+                        flg.append(True)
+                    else:
+                        break
+                if len(flg) == len(options):
+                    o = []
+                    for i, opt in enumerate(options):
+                        o.append(opt[1:])
+                    options = o
 
                 # 答案
                 ans = problem.select_one("#topicKey_{}".format(index)).get("value")
+                type = problem.select_one("#baseType_{}".format(index)).get("value")
 
-                if len(options) == 2 and "对" in options and "错" in options:
-                    questions.append(
-                        Question(
-                            question_type=QuestionType.binary_choice,
-                            stem=stem,
-                            answer=True if str(ans).upper() == "A" else False,
+                match str(type):
+                    case "1":
+                        questions.append(
+                            Question(
+                                question_type=QuestionType.single_choice,
+                                stem=stem,
+                                answer=ans,
+                                options=options,
+                            )
                         )
-                    )
-                    continue
+                    case "2":
+                        questions.append(
+                            Question(
+                                question_type=QuestionType.multiple_choice,
+                                stem=stem,
+                                answer=ans,
+                                options=options,
+                            )
+                        )
+                    case "4":
+                        questions.append(
+                            Question(
+                                question_type=QuestionType.binary_choice,
+                                stem=stem,
+                                answer=True if str(ans).upper() == "A" else False,
+                            )
+                        )
+                # if len(options) == 2 and "对" in options and "错" in options:
 
-                if len(ans) > 1:
-                    questions.append(
-                        Question(
-                            question_type=QuestionType.multiple_choice,
-                            stem=stem,
-                            answer=ans,
-                            options=options,
-                        )
-                    )
-                    continue
+                # if len(ans) > 1:
 
-                if len(ans) == 1:
-                    questions.append(
-                        Question(
-                            question_type=QuestionType.single_choice,
-                            stem=stem,
-                            answer=ans,
-                            options=options,
-                        )
-                    )
-                    continue
+                #     continue
+
+                # if len(ans) == 1:
+
         return questions
