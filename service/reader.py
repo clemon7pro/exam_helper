@@ -1,27 +1,33 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
-import pstats
+from typing import Any
 from bs4 import BeautifulSoup
 import pandas as pd
 from .question import Question, QuestionType
 
 
-def defOptsHandler(rawOpts: any) -> list:
+def _def_opts_handler(raw_opts: Any) -> list:
     opts = []
-    for opt in rawOpts:
+    for opt in raw_opts:
         opts.append(str(opt))
     return opts
 
 
+def _def_ans_handler(type: QuestionType, ans: Any) -> list | str | bool:
+    return list(ans)
+
+
 class ExcelReader(object):
-    def __init__(self, model, skiprows=0, optsHandler=None) -> None:
+    def __init__(
+        self, model: dict, skiprows=0, opts_handler=None, ans_handler=None
+    ) -> None:
         self._model = model
         self._skiprows = skiprows
-        if optsHandler is None:
-            self._optsHandler = defOptsHandler
-        else:
-            self._optsHandler = optsHandler
+        self._opts_handler = _def_opts_handler if opts_handler is None else opts_handler
+        self._ans_handler = (
+            _def_ans_handler if ans_handler is None else ans_handler
+        )
 
     def read(self, file):
         cols = [
@@ -51,17 +57,21 @@ class ExcelReader(object):
                     for idx in self._model["option_headers"]:
                         if not pd.isna(raw_question[idx]):
                             raw_options.append(raw_question[idx])
-                    options = self._optsHandler(raw_options)
+                    options = self._opts_handler(raw_options)
 
-                    answer = list(
-                        str(raw_question[self._model["answer"]]).strip().upper()
+                    question_type = (
+                        QuestionType.single_choice
+                        if raw_question[self._model["question_type"]] == "单选"
+                        else QuestionType.multiple_choice
+                    )
+                    answer = self._ans_handler(
+                        question_type,
+                        str(raw_question[self._model["answer"]]).strip().upper(),
                     )
 
                     questions.append(
                         Question(
-                            question_type=QuestionType.single_choice
-                            if raw_question[self._model["question_type"]] == "单选题"
-                            else QuestionType.multiple_choice,
+                            question_type=question_type,
                             stem=stem,
                             answer=answer,
                             options=options,
@@ -108,33 +118,24 @@ class GWXTHtmlReader(object):
         questions = []
         with open(file) as f:
             soup = BeautifulSoup(f, "html.parser")
-            for problem in soup.select(".TMBorder .problem"):
-                index = problem.get("index")
+            for raw_question in soup.select(".TMBorder .problem"):
+                index = raw_question.get("index")
                 # 题干
-                stem = problem.select_one(".TMTitle").text.strip()
+                stem = raw_question.select_one(".TMTitle").text.strip()
 
                 # 选项
                 options = []
-                for op in problem.select_one(".TMContent").select("tr"):
-                    tds = op.select("td")
+                for op in raw_question.select_one(".TMContent").select("tr"):
                     # o = tds[0].select_one("input").get("value")
-                    options.append(tds[1].select_one(".TMOption").text.strip())
-                    
-                flg = []
-                for i, opt in enumerate(options):
-                    if opt[0] == "ABCDEFGHIJK"[i]:
-                        flg.append(True)
-                    else:
-                        break
-                if len(flg) == len(options):
-                    o = []
-                    for i, opt in enumerate(options):
-                        o.append(opt[1:])
-                    options = o
+                    options.append(
+                        op.select("td")[1].select_one(".TMOption").text.strip()
+                    )
 
                 # 答案
-                ans = problem.select_one("#topicKey_{}".format(index)).get("value")
-                type = problem.select_one("#baseType_{}".format(index)).get("value")
+                ans = raw_question.select_one("#topicKey_{}".format(index)).get("value")
+                type = raw_question.select_one("#baseType_{}".format(index)).get(
+                    "value"
+                )
 
                 match str(type):
                     case "1":
@@ -163,12 +164,5 @@ class GWXTHtmlReader(object):
                                 answer=True if str(ans).upper() == "A" else False,
                             )
                         )
-                # if len(options) == 2 and "对" in options and "错" in options:
-
-                # if len(ans) > 1:
-
-                #     continue
-
-                # if len(ans) == 1:
 
         return questions

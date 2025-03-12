@@ -15,7 +15,7 @@ class Question(object):
     '''
         
     '''
-    def __init__(self, question_type: QuestionType, stem: str, answer: list or str or bool, options: list = [], explain: str = "") -> None:
+    def __init__(self, question_type: QuestionType, stem: str, answer: list | str | bool, options: list = [], explain: str = "") -> None:
         self.__question_stem = stem
         self.__answer = answer
         self.__type = question_type
